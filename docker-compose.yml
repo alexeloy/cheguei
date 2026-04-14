@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: cheguei_postgres
+    environment:
+      POSTGRES_USER: cheguei
+      POSTGRES_PASSWORD: cheguei123
+      POSTGRES_DB: cheguei
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cheguei"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./packages/backend
+      dockerfile: Dockerfile.dev
+    container_name: cheguei_backend
+    environment:
+      DATABASE_URL: postgresql://cheguei:cheguei123@192.168.18.145:5432/cheguei
+      JWT_SECRET: cheguei-local-secret-key-change-in-prod
+      PORT: 3001
+      UPLOAD_DIR: /app/uploads
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./packages/backend:/app
+      - /app/node_modules
+      - backend_uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ./packages/web
+      dockerfile: Dockerfile.dev
+    container_name: cheguei_web
+    environment:
+      # Dentro do container, use o nome do serviço Docker para acessar o backend
+      VITE_API_URL: http://192.168.18.145:3001
+      VITE_WS_URL: http://192.168.18.145:3001
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./packages/web:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  backend_uploads:
