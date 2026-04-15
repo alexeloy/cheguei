@@ -2,6 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import api, { getMediaUrl } from '../services/api';
 import { useAuthStore } from '../stores/authStore';
 
@@ -423,7 +424,15 @@ export default function PanelPage() {
     background: `linear-gradient(135deg, ${tenant?.primaryColor || '#7C3AED'} 0%, ${tenant?.secondaryColor || '#4F46E5'} 100%)`,
   };
 
-  const queueStrip = checkins;
+  // Ordena da esquerda para direita: menor ETA primeiro; sem ETA vai ao final por timestamp
+  const queueStrip = [...checkins].sort((a, b) => {
+    const etaA = etaMap[a.id];
+    const etaB = etaMap[b.id];
+    if (etaA != null && etaB != null) return etaA - etaB;
+    if (etaA != null) return -1;
+    if (etaB != null) return 1;
+    return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+  });
 
   return (
     <div className="w-screen h-screen overflow-hidden flex flex-col" style={bgStyle}>
@@ -475,24 +484,47 @@ export default function PanelPage() {
       </div>
 
       {/* Queue strip */}
-      {queueStrip.length > 0 && (
-        <div className="px-6 pb-4">
-          <div className="bg-black/20 rounded-2xl px-6 py-3">
-            <div className="flex items-center gap-4 overflow-x-auto scrollbar-hide">
-              {queueStrip.map((c) => (
-                <StudentQueueItem
-                  key={c.id}
-                  checkin={c}
-                  isAnnouncing={c.id === currentAnnouncement?.id}
-                  primaryColor={tenant?.primaryColor || primaryColor}
-                  startedAt={c.id === currentAnnouncement?.id ? announcementStartedAt : undefined}
-                  etaMinutos={etaMap[c.id]}
-                />
-              ))}
+      <AnimatePresence>
+        {queueStrip.length > 0 && (
+          <motion.div
+            className="px-6 pb-4"
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 40 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+          >
+            <div className="bg-black/20 rounded-2xl px-6 py-3">
+              <motion.div className="flex items-center gap-4 overflow-x-auto scrollbar-hide" layout>
+                <AnimatePresence mode="popLayout">
+                  {queueStrip.map((c) => (
+                    <motion.div
+                      key={c.id}
+                      layout
+                      layoutId={c.id}
+                      initial={{ opacity: 0, scale: 0.6, y: 24 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.5, y: -20 }}
+                      transition={{
+                        layout: { type: 'spring', stiffness: 350, damping: 32 },
+                        opacity: { duration: 0.22 },
+                        scale: { type: 'spring', stiffness: 400, damping: 28 },
+                      }}
+                    >
+                      <StudentQueueItem
+                        checkin={c}
+                        isAnnouncing={c.id === currentAnnouncement?.id}
+                        primaryColor={tenant?.primaryColor || primaryColor}
+                        startedAt={c.id === currentAnnouncement?.id ? announcementStartedAt : undefined}
+                        etaMinutos={etaMap[c.id]}
+                      />
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </motion.div>
             </div>
-          </div>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
