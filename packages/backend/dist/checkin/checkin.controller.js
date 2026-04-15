@@ -39,6 +39,16 @@ __decorate([
     (0, class_validator_1.IsEnum)(checkin_entity_1.CheckinStatus),
     __metadata("design:type", String)
 ], UpdateStatusDto.prototype, "status", void 0);
+class UpdateLocalizacaoDto {
+}
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], UpdateLocalizacaoDto.prototype, "latitude", void 0);
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], UpdateLocalizacaoDto.prototype, "longitude", void 0);
 let CheckinController = class CheckinController {
     constructor(service) {
         this.service = service;
@@ -59,6 +69,9 @@ let CheckinController = class CheckinController {
     }
     updateStatus(id, dto, user) {
         return this.service.updateStatus(id, user.tenantId, dto.status);
+    }
+    updateLocalizacao(id, dto, user) {
+        return this.service.updateLocalizacao(id, user.tenantId, user.id, dto.latitude, dto.longitude);
     }
     cancelar(id, user) {
         return this.service.updateStatus(id, user.tenantId, checkin_entity_1.CheckinStatus.EXPIRADO);
@@ -103,6 +116,15 @@ __decorate([
     __metadata("design:paramtypes", [String, UpdateStatusDto, Object]),
     __metadata("design:returntype", void 0)
 ], CheckinController.prototype, "updateStatus", null);
+__decorate([
+    (0, common_1.Patch)(':id/localizacao'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __param(2, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, UpdateLocalizacaoDto, Object]),
+    __metadata("design:returntype", void 0)
+], CheckinController.prototype, "updateLocalizacao", null);
 __decorate([
     (0, common_1.Delete)(':id'),
     (0, common_1.UseGuards)(roles_guard_1.RolesGuard),

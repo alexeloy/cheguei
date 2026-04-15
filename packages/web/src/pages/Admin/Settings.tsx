@@ -117,6 +117,56 @@ export default function AdminSettings() {
           </div>
         </div>
 
+        {/* School Location */}
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+          <h2 className="font-semibold text-gray-800 mb-1">Localização da Escola</h2>
+          <p className="text-xs text-gray-400 mb-4">
+            Necessário para calcular o tempo estimado de chegada dos responsáveis.{' '}
+            <a
+              href="https://support.google.com/maps/answer/18539"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-violet-500 hover:underline"
+            >
+              Como encontrar as coordenadas no Google Maps
+            </a>
+          </p>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Latitude</label>
+              <input
+                type="number"
+                step="any"
+                placeholder="Ex: -23.5505"
+                value={form.latitude ?? ''}
+                onChange={(e) => set('latitude', e.target.value === '' ? null : parseFloat(e.target.value))}
+                className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500 text-sm font-mono"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Longitude</label>
+              <input
+                type="number"
+                step="any"
+                placeholder="Ex: -46.6333"
+                value={form.longitude ?? ''}
+                onChange={(e) => set('longitude', e.target.value === '' ? null : parseFloat(e.target.value))}
+                className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500 text-sm font-mono"
+              />
+            </div>
+          </div>
+          {form.latitude && form.longitude && (
+            <p className="mt-2 text-xs text-green-600 font-medium">
+              Localização configurada: {form.latitude}, {form.longitude}
+            </p>
+          )}
+          {(!form.latitude || !form.longitude) && (
+            <p className="mt-2 text-xs text-amber-500">
+              Sem localização configurada — o ETA dos responsáveis não será calculado.
+            </p>
+          )}
+        </div>
+
         {/* Timings */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
           <h2 className="font-semibold text-gray-800 mb-4">Tempos e Intervalos</h2>

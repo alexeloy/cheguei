@@ -55,6 +55,16 @@ let EventsGateway = class EventsGateway {
     handleCheckinExpirado(payload) {
         this.server.to(`tenant:${payload.tenantId}`).emit('checkin_expirado', payload.checkin);
     }
+    handleLocalizacaoAtualizada(payload) {
+        const { checkin } = payload;
+        this.server.to(`tenant:${payload.tenantId}`).emit('localizacao_atualizada', {
+            checkinId: checkin.id,
+            alunoId: checkin.alunoId,
+            etaMinutos: checkin.etaMinutos,
+            distanciaMetros: checkin.distanciaMetros,
+            ultimaLocalizacaoAt: checkin.ultimaLocalizacaoAt,
+        });
+    }
 };
 exports.EventsGateway = EventsGateway;
 __decorate([
@@ -87,6 +97,12 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
 ], EventsGateway.prototype, "handleCheckinExpirado", null);
+__decorate([
+    (0, event_emitter_1.OnEvent)('checkin.localizacaoAtualizada'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], EventsGateway.prototype, "handleLocalizacaoAtualizada", null);
 exports.EventsGateway = EventsGateway = __decorate([
     (0, websockets_1.WebSocketGateway)({
         cors: {

@@ -57,12 +57,12 @@ async function seed() {
       tenantId: tenant.id,
       nome: 'Master',
       email: 'master@cheguei.com',
-      passwordHash: await hash('master123'),
+      passwordHash: await hash('45362718'),
       role: UserRole.MASTER,
       ativo: true,
     });
     await userRepo.save(master);
-    console.log('✅ Master criado: master@cheguei.com / master123');
+    console.log('✅ Master criado: master@cheguei.com / 45362718');
   }
 
   // Admin (administrador do tenant)
@@ -72,12 +72,12 @@ async function seed() {
       tenantId: tenant.id,
       nome: 'Administrador',
       email: 'admin@cheguei.com',
-      passwordHash: await hash('admin123'),
+      passwordHash: await hash('45362718'),
       role: UserRole.ADMIN,
       ativo: true,
     });
     await userRepo.save(admin);
-    console.log('✅ Admin criado: admin@cheguei.com / admin123');
+    console.log('✅ Admin criado: admin@cheguei.com / 45362718');
   }
 
   // Recepção
@@ -169,8 +169,8 @@ async function seed() {
   await dataSource.destroy();
   console.log('\n🎉 Seed concluído!');
   console.log('\n📋 Usuários para teste:');
-  console.log('  Master:    master@cheguei.com   / master123');
-  console.log('  Admin:     admin@cheguei.com    / admin123');
+  console.log('  Master:    master@cheguei.com   / 45362718');
+  console.log('  Admin:     admin@cheguei.com    / 45362718');
   console.log('  Recepção:  recepcao@cheguei.com / recepcao123');
   console.log('  Pai 1:     ana@example.com      / 123456 (filhos: Gustavo, Larissa)');
   console.log('  Pai 2:     carlos@example.com   / 123456 (filho: Pedro)');

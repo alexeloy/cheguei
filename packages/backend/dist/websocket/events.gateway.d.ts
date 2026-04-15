@@ -24,4 +24,8 @@ export declare class EventsGateway implements OnGatewayConnection, OnGatewayDisc
         tenantId: string;
         checkin: any;
     }): void;
+    handleLocalizacaoAtualizada(payload: {
+        tenantId: string;
+        checkin: any;
+    }): void;
 }

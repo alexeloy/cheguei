@@ -79,6 +79,14 @@ __decorate([
     __metadata("design:type", String)
 ], Tenant.prototype, "anuncioTemplate", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ type: 'float', nullable: true }),
+    __metadata("design:type", Number)
+], Tenant.prototype, "latitude", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'float', nullable: true }),
+    __metadata("design:type", Number)
+], Tenant.prototype, "longitude", void 0);
+__decorate([
     (0, typeorm_1.CreateDateColumn)(),
     __metadata("design:type", Date)
 ], Tenant.prototype, "createdAt", void 0);

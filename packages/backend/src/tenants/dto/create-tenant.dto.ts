@@ -55,4 +55,12 @@ export class CreateTenantDto {
   @IsOptional()
   @IsString()
   anuncioTemplate?: string;
+
+  @IsOptional()
+  @IsNumber()
+  latitude?: number;
+
+  @IsOptional()
+  @IsNumber()
+  longitude?: number;
 }

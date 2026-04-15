@@ -20,12 +20,14 @@ const event_emitter_1 = require("@nestjs/event-emitter");
 const schedule_1 = require("@nestjs/schedule");
 const checkin_entity_1 = require("./checkin.entity");
 const tenant_entity_1 = require("../tenants/tenant.entity");
+const maps_service_1 = require("./maps.service");
 const ACTIVE_STATUSES = [checkin_entity_1.CheckinStatus.A_CAMINHO, checkin_entity_1.CheckinStatus.CHEGOU];
 let CheckinService = class CheckinService {
-    constructor(repo, tenantsRepo, eventEmitter) {
+    constructor(repo, tenantsRepo, eventEmitter, mapsService) {
         this.repo = repo;
         this.tenantsRepo = tenantsRepo;
         this.eventEmitter = eventEmitter;
+        this.mapsService = mapsService;
     }
     async getAtivos(tenantId) {
         return this.repo.find({
@@ -82,6 +84,29 @@ let CheckinService = class CheckinService {
         this.eventEmitter.emit('checkin.statusAtualizado', { tenantId, checkin: updated });
         return updated;
     }
+    async updateLocalizacao(checkinId, tenantId, responsavelId, latitude, longitude) {
+        const checkin = await this.repo.findOne({
+            where: { id: checkinId, tenantId, responsavelId, status: checkin_entity_1.CheckinStatus.A_CAMINHO },
+            relations: ['tenant', 'aluno', 'responsavel'],
+        });
+        if (!checkin)
+            throw new common_1.NotFoundException('Checkin não encontrado ou não está A_CAMINHO');
+        if (!checkin.tenant.latitude || !checkin.tenant.longitude) {
+            throw new common_1.BadRequestException('Localização da escola não configurada. Configure no painel administrativo.');
+        }
+        const { etaSegundos, distanciaMetros } = await this.mapsService.calcularETA(latitude, longitude, checkin.tenant.latitude, checkin.tenant.longitude);
+        checkin.ultimaLatitude = latitude;
+        checkin.ultimaLongitude = longitude;
+        checkin.ultimaLocalizacaoAt = new Date();
+        checkin.etaMinutos = Math.ceil(etaSegundos / 60);
+        checkin.distanciaMetros = distanciaMetros;
+        const saved = await this.repo.save(checkin);
+        this.eventEmitter.emit('checkin.localizacaoAtualizada', {
+            tenantId,
+            checkin: saved,
+        });
+        return saved;
+    }
     async findByResponsavel(responsavelId, tenantId) {
         return this.repo.find({
             where: { responsavelId, tenantId, status: (0, typeorm_2.In)(ACTIVE_STATUSES) },
@@ -117,6 +142,7 @@ exports.CheckinService = CheckinService = __decorate([
     __param(1, (0, typeorm_1.InjectRepository)(tenant_entity_1.Tenant)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
         typeorm_2.Repository,
-        event_emitter_1.EventEmitter2])
+        event_emitter_1.EventEmitter2,
+        maps_service_1.MapsService])
 ], CheckinService);
 //# sourceMappingURL=checkin.service.js.map

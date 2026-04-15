@@ -14,6 +14,8 @@ interface Checkin {
   responsavel: { nome: string };
   timestamp: string;
   status: string;
+  etaMinutos?: number;
+  distanciaMetros?: number;
 }
 
 interface Media {
@@ -132,16 +134,18 @@ function AnnouncementRing({ startedAt, primaryColor }: { startedAt: number; prim
 }
 
 function StudentQueueItem({
-  checkin, isAnnouncing, primaryColor, startedAt,
+  checkin, isAnnouncing, primaryColor, startedAt, etaMinutos,
 }: {
   checkin: Checkin;
   isAnnouncing: boolean;
   primaryColor: string;
   startedAt?: number;
+  etaMinutos?: number;
 }) {
   const foto = checkin.aluno.fotoUrl ? getMediaUrl(checkin.aluno.fotoUrl) : null;
   const mins = Math.max(0, Math.floor((Date.now() - new Date(checkin.timestamp).getTime()) / 60000));
   const isChegou = checkin.status === 'CHEGOU';
+  const isACaminho = checkin.status === 'A_CAMINHO';
 
   return (
     <div className={`flex flex-col items-center gap-1.5 transition-all flex-shrink-0 ${!isAnnouncing && !isChegou ? 'opacity-60' : ''}`}>
@@ -164,13 +168,19 @@ function StudentQueueItem({
         {!isAnnouncing && isChegou && (
           <div className="absolute top-1 right-1 w-4 h-4 bg-yellow-400 rounded-full border-2 border-white animate-pulse" />
         )}
-        {checkin.status === 'A_CAMINHO' && (
+        {isACaminho && (
           <div className="absolute top-1 right-1 w-4 h-4 bg-orange-400 rounded-full border-2 border-white animate-pulse" />
         )}
       </div>
-      <span className="text-white text-xs font-medium">
-        {mins === 0 ? 'agora' : `${mins}m`}
-      </span>
+      {isACaminho && etaMinutos != null && etaMinutos > 0 ? (
+        <span className="text-orange-300 text-xs font-bold bg-black/30 px-2 py-0.5 rounded-full">
+          ~{etaMinutos} min
+        </span>
+      ) : (
+        <span className="text-white text-xs font-medium">
+          {mins === 0 ? 'agora' : `${mins}m`}
+        </span>
+      )}
     </div>
   );
 }
@@ -310,6 +320,8 @@ export default function PanelPage() {
   const navigate = useNavigate();
   const [checkins, setCheckins] = useState<Checkin[]>([]);
   const socketRef = useRef<Socket | null>(null);
+  // etaMap: checkinId → etaMinutos (gerenciado localmente para decrementar suavemente)
+  const [etaMap, setEtaMap] = useState<Record<string, number>>({});
 
   const [announcementStartedAt, setAnnouncementStartedAt] = useState(0);
   const announcementTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -358,6 +370,21 @@ export default function PanelPage() {
     };
   }, [currentAnnouncement?.id]);
 
+  // Decrementa o ETA local a cada minuto para suavizar a exibição entre updates de 15s
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setEtaMap((prev) => {
+        const next = { ...prev };
+        let changed = false;
+        Object.keys(next).forEach((id) => {
+          if (next[id] > 1) { next[id] -= 1; changed = true; }
+        });
+        return changed ? next : prev;
+      });
+    }, 60_000);
+    return () => clearInterval(timer);
+  }, []);
+
   useEffect(() => {
     if (!token) return;
     const socket = io(WS_URL, { auth: { token }, transports: ['websocket', 'polling'] });
@@ -370,6 +397,7 @@ export default function PanelPage() {
     socket.on('status_atualizado', (updated: Checkin) => {
       if (updated.status === 'ANUNCIADO' || updated.status === 'EXPIRADO') {
         setCheckins((prev) => prev.filter((c) => c.id !== updated.id));
+        setEtaMap((prev) => { const n = { ...prev }; delete n[updated.id]; return n; });
       } else {
         setCheckins((prev) => {
           const exists = prev.find((c) => c.id === updated.id);
@@ -381,6 +409,11 @@ export default function PanelPage() {
 
     socket.on('checkin_expirado', (expired: Checkin) => {
       setCheckins((prev) => prev.filter((c) => c.id !== expired.id));
+      setEtaMap((prev) => { const n = { ...prev }; delete n[expired.id]; return n; });
+    });
+
+    socket.on('localizacao_atualizada', (data: { checkinId: string; etaMinutos: number }) => {
+      setEtaMap((prev) => ({ ...prev, [data.checkinId]: data.etaMinutos }));
     });
 
     return () => { socket.disconnect(); };
@@ -453,6 +486,7 @@ export default function PanelPage() {
                   isAnnouncing={c.id === currentAnnouncement?.id}
                   primaryColor={tenant?.primaryColor || primaryColor}
                   startedAt={c.id === currentAnnouncement?.id ? announcementStartedAt : undefined}
+                  etaMinutos={etaMap[c.id]}
                 />
               ))}
             </div>

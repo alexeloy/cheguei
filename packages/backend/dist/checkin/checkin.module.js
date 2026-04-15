@@ -13,13 +13,14 @@ const checkin_entity_1 = require("./checkin.entity");
 const tenant_entity_1 = require("../tenants/tenant.entity");
 const checkin_service_1 = require("./checkin.service");
 const checkin_controller_1 = require("./checkin.controller");
+const maps_service_1 = require("./maps.service");
 let CheckinModule = class CheckinModule {
 };
 exports.CheckinModule = CheckinModule;
 exports.CheckinModule = CheckinModule = __decorate([
     (0, common_1.Module)({
         imports: [typeorm_1.TypeOrmModule.forFeature([checkin_entity_1.Checkin, tenant_entity_1.Tenant])],
-        providers: [checkin_service_1.CheckinService],
+        providers: [checkin_service_1.CheckinService, maps_service_1.MapsService],
         controllers: [checkin_controller_1.CheckinController],
         exports: [checkin_service_1.CheckinService],
     })

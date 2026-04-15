@@ -1,6 +1,6 @@
 import {
   Entity, PrimaryGeneratedColumn, Column, CreateDateColumn,
-  UpdateDateColumn, OneToMany,
+  UpdateDateColumn,
 } from 'typeorm';
 
 @Entity('tenants')
@@ -52,6 +52,12 @@ export class Tenant {
 
   @Column({ default: '<nome> do <turma>' })
   anuncioTemplate: string;
+
+  @Column({ type: 'float', nullable: true })
+  latitude: number;
+
+  @Column({ type: 'float', nullable: true })
+  longitude: number;
 
   @CreateDateColumn()
   createdAt: Date;

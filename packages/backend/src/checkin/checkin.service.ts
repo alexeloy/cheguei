@@ -1,5 +1,5 @@
 import {
-  Injectable, NotFoundException, ConflictException,
+  Injectable, NotFoundException, ConflictException, BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
@@ -7,6 +7,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { Checkin, CheckinStatus } from './checkin.entity';
 import { Tenant } from '../tenants/tenant.entity';
+import { MapsService } from './maps.service';
 
 const ACTIVE_STATUSES = [CheckinStatus.A_CAMINHO, CheckinStatus.CHEGOU];
 
@@ -16,6 +17,7 @@ export class CheckinService {
     @InjectRepository(Checkin) private repo: Repository<Checkin>,
     @InjectRepository(Tenant) private tenantsRepo: Repository<Tenant>,
     private eventEmitter: EventEmitter2,
+    private mapsService: MapsService,
   ) {}
 
   async getAtivos(tenantId: string) {
@@ -81,6 +83,44 @@ export class CheckinService {
 
     this.eventEmitter.emit('checkin.statusAtualizado', { tenantId, checkin: updated });
     return updated;
+  }
+
+  async updateLocalizacao(
+    checkinId: string,
+    tenantId: string,
+    responsavelId: string,
+    latitude: number,
+    longitude: number,
+  ) {
+    const checkin = await this.repo.findOne({
+      where: { id: checkinId, tenantId, responsavelId, status: CheckinStatus.A_CAMINHO },
+      relations: ['tenant', 'aluno', 'responsavel'],
+    });
+    if (!checkin) throw new NotFoundException('Checkin não encontrado ou não está A_CAMINHO');
+
+    if (!checkin.tenant.latitude || !checkin.tenant.longitude) {
+      throw new BadRequestException('Localização da escola não configurada. Configure no painel administrativo.');
+    }
+
+    const { etaSegundos, distanciaMetros } = await this.mapsService.calcularETA(
+      latitude, longitude,
+      checkin.tenant.latitude, checkin.tenant.longitude,
+    );
+
+    checkin.ultimaLatitude = latitude;
+    checkin.ultimaLongitude = longitude;
+    checkin.ultimaLocalizacaoAt = new Date();
+    checkin.etaMinutos = Math.ceil(etaSegundos / 60);
+    checkin.distanciaMetros = distanciaMetros;
+
+    const saved = await this.repo.save(checkin);
+
+    this.eventEmitter.emit('checkin.localizacaoAtualizada', {
+      tenantId,
+      checkin: saved,
+    });
+
+    return saved;
   }
 
   async findByResponsavel(responsavelId: string, tenantId: string) {

@@ -19,6 +19,11 @@ export declare class Checkin {
     timestamp: Date;
     expiresAt: Date;
     ultimaChamada: Date;
+    ultimaLatitude: number;
+    ultimaLongitude: number;
+    ultimaLocalizacaoAt: Date;
+    etaMinutos: number;
+    distanciaMetros: number;
     createdAt: Date;
     updatedAt: Date;
 }

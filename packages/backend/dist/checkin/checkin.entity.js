@@ -72,6 +72,26 @@ __decorate([
     __metadata("design:type", Date)
 ], Checkin.prototype, "ultimaChamada", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ type: 'float', nullable: true }),
+    __metadata("design:type", Number)
+], Checkin.prototype, "ultimaLatitude", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'float', nullable: true }),
+    __metadata("design:type", Number)
+], Checkin.prototype, "ultimaLongitude", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'timestamp', nullable: true }),
+    __metadata("design:type", Date)
+], Checkin.prototype, "ultimaLocalizacaoAt", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", Number)
+], Checkin.prototype, "etaMinutos", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", Number)
+], Checkin.prototype, "distanciaMetros", void 0);
+__decorate([
     (0, typeorm_1.CreateDateColumn)(),
     __metadata("design:type", Date)
 ], Checkin.prototype, "createdAt", void 0);

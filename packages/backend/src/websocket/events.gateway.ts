@@ -74,4 +74,16 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server.to(`tenant:${payload.tenantId}`).emit('checkin_expirado', payload.checkin);
   }
 
+  @OnEvent('checkin.localizacaoAtualizada')
+  handleLocalizacaoAtualizada(payload: { tenantId: string; checkin: any }) {
+    const { checkin } = payload;
+    this.server.to(`tenant:${payload.tenantId}`).emit('localizacao_atualizada', {
+      checkinId: checkin.id,
+      alunoId: checkin.alunoId,
+      etaMinutos: checkin.etaMinutos,
+      distanciaMetros: checkin.distanciaMetros,
+      ultimaLocalizacaoAt: checkin.ultimaLocalizacaoAt,
+    });
+  }
+
 }

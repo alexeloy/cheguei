@@ -51,6 +51,21 @@ export class Checkin {
   @Column({ type: 'timestamp', nullable: true })
   ultimaChamada: Date;
 
+  @Column({ type: 'float', nullable: true })
+  ultimaLatitude: number;
+
+  @Column({ type: 'float', nullable: true })
+  ultimaLongitude: number;
+
+  @Column({ type: 'timestamp', nullable: true })
+  ultimaLocalizacaoAt: Date;
+
+  @Column({ nullable: true })
+  etaMinutos: number;
+
+  @Column({ nullable: true })
+  distanciaMetros: number;
+
   @CreateDateColumn()
   createdAt: Date;
 

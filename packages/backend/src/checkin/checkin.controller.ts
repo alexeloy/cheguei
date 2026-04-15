@@ -7,7 +7,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { CheckinService } from './checkin.service';
 import { CheckinStatus } from './checkin.entity';
-import { IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
 import { UserRole } from '../users/user.entity';
 
 class CreateCheckinDto {
@@ -23,6 +23,14 @@ class CreateCheckinDto {
 class UpdateStatusDto {
   @IsEnum(CheckinStatus)
   status: CheckinStatus;
+}
+
+class UpdateLocalizacaoDto {
+  @IsNumber()
+  latitude: number;
+
+  @IsNumber()
+  longitude: number;
 }
 
 @Controller('checkin')
@@ -59,6 +67,15 @@ export class CheckinController {
     @CurrentUser() user: any,
   ) {
     return this.service.updateStatus(id, user.tenantId, dto.status);
+  }
+
+  @Patch(':id/localizacao')
+  updateLocalizacao(
+    @Param('id') id: string,
+    @Body() dto: UpdateLocalizacaoDto,
+    @CurrentUser() user: any,
+  ) {
+    return this.service.updateLocalizacao(id, user.tenantId, user.id, dto.latitude, dto.longitude);
   }
 
   // ADMIN/RECEPCAO podem cancelar um checkin (remover aluno da fila)

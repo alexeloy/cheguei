@@ -13,4 +13,6 @@ export declare class CreateTenantDto {
     preferredVoiceName?: string;
     subdomain?: string;
     anuncioTemplate?: string;
+    latitude?: number;
+    longitude?: number;
 }

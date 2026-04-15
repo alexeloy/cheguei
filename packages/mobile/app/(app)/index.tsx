@@ -7,6 +7,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { io, Socket } from 'socket.io-client';
+import * as Location from 'expo-location';
 import api, { getImageUrl } from '../../src/services/api';
 import { useAuthStore } from '../../src/stores/authStore';
 
@@ -50,6 +51,42 @@ function TelaResponsavel() {
   const qc = useQueryClient();
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const locationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Pede permissão de localização ao montar a tela
+  useEffect(() => {
+    Location.requestForegroundPermissionsAsync().catch(() => {});
+    return () => {
+      if (locationIntervalRef.current) clearInterval(locationIntervalRef.current);
+    };
+  }, []);
+
+  const iniciarRastreamento = (checkinId: string) => {
+    if (locationIntervalRef.current) clearInterval(locationIntervalRef.current);
+    // Envia posição imediatamente e depois a cada 15s
+    const enviarLocalizacao = async () => {
+      try {
+        const perm = await Location.getForegroundPermissionsAsync();
+        if (perm.status !== 'granted') return;
+        const { coords } = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        await api.patch(`/checkin/${checkinId}/localizacao`, {
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+        });
+      } catch {
+        // Silencia erros de localização para não interromper o fluxo
+      }
+    };
+    enviarLocalizacao();
+    locationIntervalRef.current = setInterval(enviarLocalizacao, 15_000);
+  };
+
+  const pararRastreamento = () => {
+    if (locationIntervalRef.current) {
+      clearInterval(locationIntervalRef.current);
+      locationIntervalRef.current = null;
+    }
+  };
 
   const { data: alunos = [], isLoading, refetch } = useQuery<Aluno[]>({
     queryKey: ['meus-alunos'],
@@ -65,6 +102,10 @@ function TelaResponsavel() {
   const aCaminhoMut = useMutation({
     mutationFn: (alunoId: string) => api.post('/checkin', { alunoId }),
     onMutate: (id) => setLoadingId(id),
+    onSuccess: (res) => {
+      const checkinId = res.data?.id;
+      if (checkinId) iniciarRastreamento(checkinId);
+    },
     onSettled: () => { setLoadingId(null); qc.invalidateQueries({ queryKey: ['meus-checkins'] }); },
     onError: (err: any) => Alert.alert('Aviso', err.response?.data?.message || 'Erro'),
   });
@@ -72,6 +113,7 @@ function TelaResponsavel() {
   const chegueiMut = useMutation({
     mutationFn: (checkinId: string) => api.patch(`/checkin/${checkinId}/status`, { status: 'CHEGOU' }),
     onMutate: () => setLoadingId('chegou'),
+    onSuccess: () => pararRastreamento(),
     onSettled: () => { setLoadingId(null); qc.invalidateQueries({ queryKey: ['meus-checkins'] }); },
     onError: (err: any) => Alert.alert('Aviso', err.response?.data?.message || 'Erro'),
   });
