@@ -177,6 +177,9 @@ function StudentQueueItem({
         <span className="text-orange-300 text-xs font-bold bg-black/30 px-2 py-0.5 rounded-full">
           ~{etaMinutos} min
         </span>
+      ) : isACaminho ? (
+        // Sem ETA ainda — não exibe nada até o primeiro update de localização
+        <span className="text-white/0 text-xs select-none">·</span>
       ) : (
         <span className="text-white text-xs font-medium">
           {mins === 0 ? 'agora' : `${mins}m`}

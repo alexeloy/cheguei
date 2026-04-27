@@ -1,9 +1,9 @@
 import {
   View, Text, TouchableOpacity, StyleSheet, FlatList,
   ActivityIndicator, Alert, Image, StatusBar, RefreshControl,
-  TextInput, ScrollView,
+  TextInput, ScrollView, Animated, PanResponder, Dimensions,
 } from 'react-native';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { io, Socket } from 'socket.io-client';
@@ -43,6 +43,163 @@ function Avatar({ nome, fotoUrl, size = 48 }: { nome: string; fotoUrl?: string; 
     </View>
   );
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SLIDE TO CONFIRM
+// ─────────────────────────────────────────────────────────────────────────────
+const THUMB = 52;       // diâmetro do polegar
+const TRACK_H = 56;     // altura da trilha
+const THRESHOLD = 0.82; // percentual para confirmar
+
+function SlideToConfirm({
+  label, icon, color, onConfirm, disabled = false,
+}: {
+  label: string;
+  icon: string;
+  color: string;
+  onConfirm: () => void;
+  disabled?: boolean;
+}) {
+  // useState para re-render após onLayout — necessário para interpolate ter ranges válidos
+  const [trackWidth, setTrackWidth] = useState(0);
+  const maxXRef = useRef(0);
+  const dragX = useRef(new Animated.Value(0)).current;
+  const confirmed = useRef(false);
+  const onConfirmRef = useRef(onConfirm);
+  onConfirmRef.current = onConfirm;
+
+  // Atualiza maxX sempre que trackWidth muda
+  useEffect(() => {
+    maxXRef.current = Math.max(0, trackWidth - THUMB - 4);
+  }, [trackWidth]);
+
+  const reset = useRef(() => {
+    confirmed.current = false;
+    Animated.spring(dragX, { toValue: 0, useNativeDriver: false, friction: 6, tension: 80 }).start();
+  }).current;
+
+  // PanResponder só depende de disabled; usa refs para os valores dinâmicos
+  const panResponder = useMemo(() => PanResponder.create({
+    onStartShouldSetPanResponder: () => !disabled,
+    onMoveShouldSetPanResponder: (_, g) => !disabled && Math.abs(g.dx) > 4,
+    onPanResponderMove: (_, g) => {
+      dragX.setValue(Math.max(0, Math.min(g.dx, maxXRef.current)));
+    },
+    onPanResponderRelease: (_, g) => {
+      const x = Math.max(0, Math.min(g.dx, maxXRef.current));
+      if (maxXRef.current > 0 && x / maxXRef.current >= THRESHOLD && !confirmed.current) {
+        confirmed.current = true;
+        Animated.spring(dragX, { toValue: maxXRef.current, useNativeDriver: false, friction: 7 }).start(() => {
+          onConfirmRef.current();
+          setTimeout(reset, 600);
+        });
+      } else {
+        reset();
+      }
+    },
+    onPanResponderTerminate: reset,
+  }), [disabled]);
+
+  // inputRange sempre monotonicamente crescente: garante mínimo de 1
+  const safeMax  = Math.max(1, trackWidth - THUMB - 4);
+  const safeHalf = Math.max(1, safeMax * 0.5);
+
+  const fillWidth = dragX.interpolate({
+    inputRange: [0, safeMax],
+    outputRange: ['0%', '100%'],
+    extrapolate: 'clamp',
+  });
+
+  const labelOpacity = dragX.interpolate({
+    inputRange: [0, safeHalf],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
+
+  return (
+    <View
+      onLayout={(e) => setTrackWidth(e.nativeEvent.layout.width)}
+      style={[sliderS.track, { opacity: disabled ? 0.45 : 1 }]}
+    >
+      {/* fill */}
+      <Animated.View style={[sliderS.fill, { width: fillWidth, backgroundColor: color }]} />
+
+      {/* hint central — some conforme arrasta */}
+      <Animated.Text style={[sliderS.label, { opacity: labelOpacity }]}>
+        
+      </Animated.Text>
+
+      {/* thumb */}
+      <Animated.View
+        {...panResponder.panHandlers}
+        style={[sliderS.thumb, { backgroundColor: color, transform: [{ translateX: dragX }] }]}
+      >
+        <Text style={sliderS.thumbIcon}>{icon}</Text>
+      </Animated.View>
+
+      {/* rótulo da ação — some conforme arrasta */}
+      <Animated.Text
+        pointerEvents="none"
+        style={[sliderS.actionLabel, { opacity: labelOpacity }]}
+        numberOfLines={1}
+      >
+        {label}
+      </Animated.Text>
+    </View>
+  );
+}
+
+const sliderS = StyleSheet.create({
+  track: {
+    height: TRACK_H,
+    borderRadius: TRACK_H / 2,
+    backgroundColor: '#F3F4F6',
+    overflow: 'hidden',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  fill: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    bottom: 0,
+    borderRadius: TRACK_H / 2,
+    opacity: 0.25,
+  },
+  label: {
+    position: 'absolute',
+    alignSelf: 'center',
+    fontSize: 12,
+    color: '#9CA3AF',
+    fontWeight: '500',
+    letterSpacing: 0.3,
+  },
+  actionLabel: {
+    position: 'absolute',
+    left: THUMB + 14,
+    right: 16,
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#374151',
+  },
+  thumb: {
+    position: 'absolute',
+    left: 2,
+    width: THUMB,
+    height: THUMB,
+    borderRadius: THUMB / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  thumbIcon: {
+    fontSize: 22,
+  },
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TELA RESPONSÁVEL
@@ -167,14 +324,24 @@ function TelaResponsavel() {
                 {st === 'CHEGOU' && <StatusPill color="#DCFCE7" dot="#22C55E" text="Chegou!" textColor="#15803D" />}
               </View>
               {!st && (
-                <TouchableOpacity style={s.btnPrimary} disabled={loading} onPress={() => aCaminhoMut.mutate(item.id)}>
-                  <Text style={s.btnText}>{loading ? 'Aguarde...' : '🚗  Estou a caminho'}</Text>
-                </TouchableOpacity>
+                loading
+                  ? <View style={s.btnGray}><ActivityIndicator color="#7C3AED" /></View>
+                  : <SlideToConfirm
+                      icon="🚗"
+                      label="Estou a caminho"
+                      color="#7C3AED"
+                      onConfirm={() => aCaminhoMut.mutate(item.id)}
+                    />
               )}
               {st === 'A_CAMINHO' && (
-                <TouchableOpacity style={s.btnGreen} disabled={loading} onPress={() => chegueiMut.mutate(checkin!.id)}>
-                  <Text style={s.btnText}>{loading ? 'Aguarde...' : '✅  Cheguei!'}</Text>
-                </TouchableOpacity>
+                loading
+                  ? <View style={s.btnGray}><ActivityIndicator color="#16A34A" /></View>
+                  : <SlideToConfirm
+                      icon="✅"
+                      label="Cheguei!"
+                      color="#16A34A"
+                      onConfirm={() => chegueiMut.mutate(checkin!.id)}
+                    />
               )}
               {st === 'CHEGOU' && (
                 <View style={s.btnGray}><Text style={s.btnGrayText}>📢  Anunciando...</Text></View>

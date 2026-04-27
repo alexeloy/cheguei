@@ -24,7 +24,8 @@ services:
       dockerfile: Dockerfile.dev
     container_name: cheguei_backend
     environment:
-      DATABASE_URL: postgresql://cheguei:cheguei123@192.168.18.152:5432/cheguei
+      #DATABASE_URL: postgresql://cheguei:cheguei123@192.168.18.152:5432/cheguei
+      DATABASE_URL: postgresql://cheguei:cheguei123@postgres:5432/cheguei
       JWT_SECRET: cheguei-local-secret-key-change-in-prod
       PORT: 3001
       UPLOAD_DIR: /app/uploads
@@ -49,6 +50,8 @@ services:
       # Dentro do container, use o nome do serviço Docker para acessar o backend
       VITE_API_URL: http://192.168.18.152:3001
       VITE_WS_URL: http://192.168.18.152:3001
+      #VITE_API_URL: http://10.157.150.32:3001
+      #VITE_WS_URL: http://10.157.150.32:3001
     ports:
       - "5173:5173"
     volumes:
