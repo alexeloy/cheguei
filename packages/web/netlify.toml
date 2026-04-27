@@ -1,0 +1,9 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# Sem isso, qualquer refresh em rota React retorna 404
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
